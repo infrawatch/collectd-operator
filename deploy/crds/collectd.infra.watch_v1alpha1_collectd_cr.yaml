@@ -1,0 +1,7 @@
+apiVersion: collectd.infra.watch/v1alpha1
+kind: Collectd
+metadata:
+  name: example-collectd
+spec:
+  # Add fields here
+  size: 3
