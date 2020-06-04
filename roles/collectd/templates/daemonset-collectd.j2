@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ meta.name }}
+  namespace: {{ meta.namespace }}
+  labels:
+    name: collectd
+spec:
+  selector:
+    matchLabels:
+      name: collectd
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        name: collectd
+        component: collectd
+    spec:
+      serviceAccountName: collectd-sa
+      hostNetwork: true
+      hostPID: true
+
+      containers:
+      - name: collectd
+        image: {{ collectd_image }}:{{ collectd_image_tag }}
+        env:
+          - name: KOLLA_CONFIG_STRATEGY
+            value: "COPY_ALWAYS"
+        securityContext:
+          privileged: true
+        resources: {}
+
+        terminationMessagePolicy: FallbackToLogsOnError
+        terminationMessagePath: /dev/termination-log
+
+        volumeMounts:
+        - mountPath: /var/lib/kolla/config_files/src/etc/collectd.d
+          name: puppet-config
+          readOnly: false
+        - mountPath: /var/lib/kolla/config_files
+          name: config-json
+          readOnly: true
+        - mountPath: /var/lib/kolla/config_files/src/etc
+          name: config-conf
+          readOnly: true
+        - mountPath: /var/log/collectd
+          name: collectd-log
+          readOnly: false
+        - mountPath: /var/cache/pmu
+          name: pmu
+          readOnly: false
+        - mountPath: /var/run
+          name: host-var-run
+          readOnly: false
+        - mountPath: /tmp
+          name: host-tmp
+          readOnly: false
+        - mountPath: /var/lib/collectd
+          name: host-var-lib-collectd
+          readOnly: true
+          # to run commands chroot in to the host
+        - mountPath: /host
+          name: host-slash
+          readOnly: true
+      volumes:
+        - name: collectd-log
+          emptyDir: {}
+        - name: puppet-config
+          emptyDir: {}
+        - name: config-conf
+          configMap:
+            name: collectd-config
+            items:
+            - key: node-collectd.conf
+              path: collectd.conf
+        - name: config-json
+          configMap:
+            name: collectd-json
+            items:
+            - key: collectd.json
+              path: config.json
+        - name: pmu
+          hostPath:
+            path: /var/cache/pmu
+            type: DirectoryOrCreate
+        - name: host-var-run
+          hostPath:
+            path: /var/run
+        - name: host-tmp
+          hostPath:
+            path: /tmp
+        - name: host-var-lib-collectd
+          hostPath:
+            path: /var/lib/collectd
+        - name: host-slash
+          hostPath:
+            path: /
+      terminationGracePeriodSeconds: 10
+      restartPolicy: Always
