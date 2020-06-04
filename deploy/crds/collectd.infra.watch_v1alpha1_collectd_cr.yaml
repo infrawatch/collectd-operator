@@ -3,5 +3,4 @@ kind: Collectd
 metadata:
   name: example-collectd
 spec:
-  # Add fields here
-  size: 3
+  size: 1

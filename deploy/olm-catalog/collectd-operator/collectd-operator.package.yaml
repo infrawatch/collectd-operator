@@ -1,0 +1,5 @@
+channels:
+- currentCSV: collectd-operator.v0.0.1
+  name: stable
+defaultChannel: stable
+packageName: collectd-operator
