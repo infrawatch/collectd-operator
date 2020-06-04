@@ -5,7 +5,7 @@ metadata:
   name: collectd-config
 
 data:
-  node-collectd.conf: |-
+  node-collectd.conf: |
     #Hostname localhost
     FQDNLookup true
 
@@ -249,3 +249,4 @@ data:
        ExtraStats "{{ collectd_plugin_virt_extrastats }}"
     </Plugin>
     {% endif %}
+
