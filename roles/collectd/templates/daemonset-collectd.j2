@@ -20,6 +20,7 @@ spec:
       serviceAccountName: collectd-sa
       hostNetwork: true
       hostPID: true
+      dnsPolicy: ClusterFirstWithHostNet
 
       containers:
       - name: collectd
