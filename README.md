@@ -14,6 +14,18 @@ source <(kubectl completion bash)
 source <(minikube completion bash)
 ```
 
+## Development
+
+You can test that everything passes the Operator SDK scorecard. Currently we're
+leveraging `operator-sdk` v0.15.2. You must run this when the collectd operator
+is not already running. If the CRD is loaded, the scorecard will fail.
+
+```
+kubectl create namespace collectd
+kubectl config set-context --current --namespace=collectd
+operator-sdk scorecard
+```
+
 ## Load the Operator
 
 We're not currently making full use of the Operator Lifecycle Manager, so we'll
