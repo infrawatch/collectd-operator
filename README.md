@@ -193,3 +193,17 @@ EOF
 ```
 
 ```
+
+## Create Collectd
+
+```
+kubectl apply -f - <<EOF
+apiVersion: collectd.infra.watch/v1alpha1
+kind: Collectd
+metadata:
+  name: 'collectd'
+  namespace: 'collectd'
+spec:
+  size: 1
+EOF
+```

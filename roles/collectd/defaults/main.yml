@@ -10,6 +10,7 @@ collectd_plugin_virt_refreshinterval: 10
 collectd_plugin_virt_hostnameformat: "hostname uuid"
 collectd_plugin_virt_plugininstanceformat: name
 collectd_plugin_virt_extrastats: "cpu_util disk disk_err domain_state pcpu fs_info job_stats_background perf vcpupin"
+state: present
 
 plugins:
   - cpu
