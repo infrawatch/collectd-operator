@@ -1,2 +1,14 @@
 ---
-# tasks file for collectd
+- name: "Get information about the cluster"
+  set_fact:
+    api_groups: "{{ lookup('k8s', cluster_info='api_groups') }}"
+
+- name: Setup collectd
+  k8s:
+    state: "{{ state }}"
+    definition: "{{ lookup('template', item.name) | from_yaml }}"
+  when: item.to_load | default(True)
+  loop:
+    - name: configmap-collectd-json.j2
+    - name: configmap-collectd-conf.j2
+    - name: daemonset-collectd.j2

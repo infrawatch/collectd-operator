@@ -76,9 +76,9 @@ data:
     ##############################################################################
 
     <Plugin amqp1>
-      <Transport "name">
-        Host "{{ collectd_host }}"
-        Port "{{ collectd_port }}"
+      <Transport "metrics">
+        Host "qdr-interconnect"
+        Port "5672"
         Address "collectd"
         RetryDelay 1
         <Instance "notify">
@@ -88,7 +88,7 @@ data:
         </Instance>
         <Instance "telemetry">
             Format JSON
-            PreSettle true
+            PreSettle false
         </Instance>
       </Transport>
     </Plugin>
