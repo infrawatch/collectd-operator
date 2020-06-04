@@ -17,7 +17,7 @@ metadata:
       ]
     capabilities: Basic Install
   name: collectd-operator.v0.0.1
-  namespace: placeholder
+  namespace: collectd
 spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
