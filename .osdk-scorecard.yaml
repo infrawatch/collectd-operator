@@ -1,14 +1,13 @@
 scorecard:
   version: v1alpha2
   output: text
-  bundle: ./deploy/olm-catalog/collectd-operator/0.0.1/metadata
   plugins:
     - basic:
         cr-manifest:
           - "deploy/crds/collectd.infra.watch_v1alpha1_collectd_cr.yaml"
-        csv-path: "deploy/olm-catalog/collectd-operator/0.0.1/collectd-operator.v0.0.1.clusterserviceversion.yaml"
+        csv-path: "deploy/olm-catalog/collectd-operator/0.0.2/collectd-operator.v0.0.2.clusterserviceversion.yaml"
     - olm:
         cr-manifest:
           - "deploy/crds/collectd.infra.watch_v1alpha1_collectd_cr.yaml"
-        csv-path: "deploy/olm-catalog/collectd-operator/0.0.1/collectd-operator.v0.0.1.clusterserviceversion.yaml"
+        csv-path: "deploy/olm-catalog/collectd-operator/0.0.2/collectd-operator.v0.0.2.clusterserviceversion.yaml"
 
