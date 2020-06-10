@@ -8,15 +8,13 @@ metadata:
           "apiVersion": "collectd.infra.watch/v1alpha1",
           "kind": "Collectd",
           "metadata": {
-            "name": "example-collectd"
+            "name": "collectd"
           },
-          "spec": {
-            "size": 1
-          }
+          "spec": {}
         }
       ]
     capabilities: Basic Install
-  name: collectd-operator.v0.0.1
+  name: collectd-operator.v0.0.2
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -60,7 +58,7 @@ spec:
         path: conditions
         x-descriptors:
         - urn:alm:descriptor:io.kubernetes.conditions
-      version: "v1alpha1"
+      version: v1alpha1
   description: Operator for launching collectd on k8s
   displayName: Collectd Operator
   install:
@@ -128,6 +126,7 @@ spec:
           - events
           - configmaps
           - secrets
+          - serviceaccounts
           verbs:
           - '*'
         - apiGroups:
@@ -174,6 +173,19 @@ spec:
           verbs:
           - get
         - apiGroups:
+          - rbac.authorization.k8s.io
+          resources:
+          - clusterrolebindings
+          - clusterroles
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
           - collectd.infra.watch
           resources:
           - '*'
@@ -205,5 +217,5 @@ spec:
   maturity: alpha
   provider:
     name: InfraWatch
-  replaces: collectd-operator.v0.0.0
-  version: 0.0.1
+  replaces: collectd-operator.v0.0.1
+  version: 0.0.2
