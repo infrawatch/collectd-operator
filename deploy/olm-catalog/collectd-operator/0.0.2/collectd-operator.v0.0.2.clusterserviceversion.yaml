@@ -47,11 +47,31 @@ spec:
         name: ""
         version: v1alpha1
       specDescriptors:
-      - description: Number of Collectds to deploy
-        displayName: Size
-        path: size
+      - description: QPID Dispatch Router host for amqp1 plugin connection
+        displayName: Collectd AMQP1 Host
+        path: collectdHost
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: QPID Dispatch Router port for amqp1 plugin connection
+        displayName: Collectd AMQP1 Port
+        path: collectdPort
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:number
+      - description: Collectd data collection interval (in seconds)
+        displayName: Collectd collection interval
+        path: collectdInterval
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:number
+      - description: Collectd container image path
+        displayName: Collectd Image
+        path: collectdImage
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
+      - description: Collectd container image tag
+        displayName: Collectd Image Tag
+        path: collectdImageTag
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:text
       statusDescriptors:
       - description: Conditions provided by deployment
         displayName: Conditions
