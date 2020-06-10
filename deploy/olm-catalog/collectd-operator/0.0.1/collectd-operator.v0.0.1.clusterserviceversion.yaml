@@ -49,7 +49,7 @@ spec:
         name: ""
         version: v1alpha1
       specDescriptors:
-      - description: Number of Smart Gateways to deploy
+      - description: Number of Collectds to deploy
         displayName: Size
         path: size
         x-descriptors:
