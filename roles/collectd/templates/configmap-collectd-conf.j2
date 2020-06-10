@@ -77,8 +77,8 @@ data:
 
     <Plugin amqp1>
       <Transport "metrics">
-        Host "stf-default-interconnect.service-telemetry.svc.cluster.local"
-        Port "5672"
+        Host "{{ collectd_host }}"
+        Port "{{ collectd_port }}"
         Address "collectd"
         RetryDelay 1
         <Instance "openshift-notify">
