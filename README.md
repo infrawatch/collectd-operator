@@ -304,3 +304,13 @@ spec:
   collectdHost: qdr-interconnect
 EOF
 ```
+
+# Accessing Prometheus UI
+
+Accessing the Prometheus UI via minikube is done by exposing the
+`prometheus-operated` service.
+
+```
+kubectl expose -n collectd service prometheus-operated --port=80 --target-port=9090 --name=prometheus-web --type=LoadBalancer
+minikube service prometheus-web -n collectd
+```
