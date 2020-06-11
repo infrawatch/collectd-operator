@@ -9,6 +9,7 @@ addons.
 
 ```
 minikube start --cpus=4 --memory=49152 --driver=kvm2
+for i in default-storageclass ingress olm registry storage-provisioner; do minikube addons enable $i; done
 eval $(minikube podman-env)
 source <(kubectl completion bash)
 source <(minikube completion bash)
