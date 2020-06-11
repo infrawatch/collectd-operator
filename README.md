@@ -164,7 +164,7 @@ metadata:
   name: 'collectd-metrics-telemetry'
   namespace: 'collectd'
 spec:
-  amqpUrl: 'qdr-interconnect:5672/telemetry'
+  amqpUrl: 'qdr-interconnect:5672/collectd/openshift-telemetry'
   debug: false
   serviceType: 'metrics'
   size: 1
