@@ -31,11 +31,29 @@ operator-sdk scorecard
 We're not currently making full use of the Operator Lifecycle Manager, so we'll
 be importing things manually.
 
+First, create the OperatorGroup:
+
+```
+kubectl apply -f - <<EOF
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: collectd-og
+  namespace: collectd
+spec:
+  targetNamespaces:
+  -  collectd
+EOF
+```
+
+Then create the ServiceAccount, ClusterRole, ClusterRoleBinding and
+ClusterServiceVersion:
+
 ```
 kubectl create namespace collectd
 kubectl config set-context --current --namespace=collectd
-kubectl apply -f deploy/service_account.yaml -f deploy/role.yaml -f deploy/role_binding.yaml
-kubectl apply -f deploy/olm-catalog/collectd-operator/0.0.1/collectd.infra.watch_collectds_crd.yaml -f deploy/olm-catalog/collectd-operator/0.0.1/collectd-operator.v0.0.1.clusterserviceversion.yaml
+kubectl apply -f deploy/service_account.yaml -f deploy/role.yaml -f deploy/role_binding.yaml -f deploy/olm-catalog/collectd-operator/0.0.2/collectd.infra.watch_collectds_crd.yaml 
+sed -e "s#placeholder#collectd#g" deploy/olm-catalog/collectd-operator/0.0.2/collectd-operator.v0.0.2.clusterserviceversion.yaml | kubectl apply -f -
 ```
 
 Then we can check that everything is working.
@@ -55,58 +73,17 @@ NAME                                           DESIRED   CURRENT   READY   AGE
 replicaset.apps/collectd-operator-65749b54b4   1         1         1       7m50s
 
 NAME                                                                  DISPLAY             VERSION   REPLACES                   PHASE
-clusterserviceversion.operators.coreos.com/collectd-operator.v0.0.1   Collectd Operator   0.0.1     collectd-operator.v0.0.0   Succeeded
+clusterserviceversion.operators.coreos.com/collectd-operator.v0.0.2   Collectd Operator   0.0.2     collectd-operator.v0.0.1   Succeeded
 ```
 
 # Other Components
 
 Load additional components to setup a transport mechanism.
 
-## Cert-Manager Operator
-
-TODO: this may not be necessary (need different version of cert-manager to work
-with QDR Operator).
-
-```
-kubectl apply --validate=false -f https://github.com/jetstack/cert-manager/releases/download/v0.15.1/cert-manager.yaml
-```
-
-Then create a local signing authority.
-
-```
-kubectl apply -f - <<EOF
-apiVersion: cert-manager.io/v1alpha2
-kind: Issuer
-metadata:
-  name: 'collectd-selfsigned'
-  namespace: 'collectd'
-spec:
-  selfSigned: {}
----
-apiVersion: cert-manager.io/v1alpha2
-kind: Certificate
-metadata:
-  name: 'collectd-ca'
-  namespace: 'collectd'
-spec:
-  secretName: 'collectd-ca'
-  commonName: 'collectd-ca'
-  isCA: true
-  issuerRef:
-    name: 'collectd-selfsigned'
----
-apiVersion: cert-manager.io/v1alpha2
-kind: Issuer
-metadata:
-  name: 'collectd-ca'
-  namespace: 'collectd'
-spec:
-  ca:
-    secretName: 'collectd-ca'
-EOF
-```
-
 ## QDR Operator
+
+Load the ServiceAccount, Role, RoleBinding, ClusterRole, ClusterRoleBinding and
+CustomResourceDefinition:
 
 ```
 git clone https://github.com/interconnectedcloud/qdr-operator.git
@@ -116,8 +93,16 @@ kubectl apply -f deploy/service_account.yaml \
     -f deploy/role_binding.yaml \
     -f deploy/cluster_role.yaml \
     -f deploy/cluster_role_binding.yaml \
-    -f deploy/olm-catalog/qdr-operator/0.4.0/qdr-operator.v0.4.0.clusterserviceversion.yaml \
     -f deploy/crds/interconnectedcloud_v1alpha1_interconnect_crd.yaml
+```
+
+Then load the ClusterServiceVersion:
+
+| **NOTE** You may need to apply a small patch prior to running the next command. See https://github.com/interconnectedcloud/qdr-operator/pull/75 |
+|-------------------------------------------------------------------------------------------------------------------------------------------------|
+
+```
+sed -e "s#placeholder#collectd#g" deploy/olm-catalog/qdr-operator/0.4.0/qdr-operator.v0.4.0.clusterserviceversion.yaml | kubectl apply -f -
 ```
 
 Then create an instance of QDR.
@@ -165,8 +150,8 @@ Instantiate the Smart Gateway Operator.
 ```
 git clone https://github.com/infrawatch/smart-gateway-operator
 cd smart-gateway-operator
-kubectl apply -f deploy/role_binding.yaml -f deploy/role.yaml -f deploy/service_account.yaml -f deploy/olm-catalog/smart-gateway-operator/1.0.1/smartgateway.infra.watch_smartgateways_crd.yaml
-kubectl apply -f deploy/olm-catalog/smart-gateway-operator/1.0.1/smart-gateway-operator.v1.0.1.clusterserviceversion.yaml
+kubectl apply -f deploy/role_binding.yaml -f deploy/role.yaml -f deploy/service_account.yaml -f deploy/olm-catalog/smart-gateway-operator/1.0.2/smartgateway.infra.watch_smartgateways_crd.yaml
+sed -e "s#placeholder#collectd#g" deploy/olm-catalog/smart-gateway-operator/1.0.2/smart-gateway-operator.v1.0.2.clusterserviceversion.yaml | kubectl apply -f -
 ```
 
 Create a Smart Gateway instance.
@@ -190,11 +175,123 @@ EOF
 
 ## Prometheus Operator
 
-```
+Subscribe to Prometheus Operator from the OperatorHubIO catalog source:
 
 ```
+kubectl apply -f - <<EOF
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: prometheus
+  namespace: collectd
+spec:
+  channel: beta
+  installPlanApproval: Automatic
+  name: prometheus
+  source: operatorhubio-catalog
+  sourceNamespace: olm
+  startingCSV: prometheusoperator.0.37.0
+EOF
+```
 
-## Create Collectd
+Create a Prometheus instance:
+
+```
+kubectl apply -f - <<EOF
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  labels:
+    prometheus: 'prometheus'
+  name: prometheus
+  namespace: collectd
+spec:
+  replicas: 1
+  ruleSelector: {}
+  securityContext: {}
+  serviceAccountName: prometheus-k8s
+  serviceMonitorSelector:
+    matchLabels:
+      app: smart-gateway
+  alerting:
+    alertmanagers:
+    - name: alertmanager-operated
+      namespace: collectd
+      port: web
+EOF
+```
+
+Create a ServiceMonitor to result in Prometheus being configured to scrape our
+new Smart Gateway:
+
+```
+kubectl apply -f - <<EOF
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app: smart-gateway
+  name: 'collectd'
+  namespace: 'collectd'
+spec:
+  endpoints:
+    - metricRelabelings:
+        - action: labeldrop
+          regex: pod
+          sourceLabels: []
+        - action: labeldrop
+          regex: namespace
+          sourceLabels: []
+        - action: labeldrop
+          regex: instance
+          sourceLabels: []
+        - action: labeldrop
+          regex: job
+          sourceLabels: []
+      port: prom-http
+  selector:
+    matchLabels:
+      app: smart-gateway
+EOF
+```
+
+Create an Alertmanager instance:
+
+```
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: 'alertmanager-collectd'
+  namespace: 'collectd'
+type: Opaque
+stringData:
+  alertmanager.yaml: |-
+    global:
+      resolve_timeout: 5m
+    route:
+      group_by: ['job']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 12h
+      receiver: 'null'
+    receivers:
+    - name: 'null'
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Alertmanager
+metadata:
+  labels:
+    alertmanager: 'alertmanager'
+  name: 'collectd'
+  namespace: 'collectd'
+spec:
+  replicas: 1
+  serviceAccountName: prometheus-k8s
+EOF
+```
+
+## Create Collectd DaemonSet
 
 ```
 kubectl apply -f - <<EOF
@@ -204,6 +301,6 @@ metadata:
   name: 'collectd'
   namespace: 'collectd'
 spec:
-  size: 1
+  collectdHost: qdr-interconnect
 EOF
 ```
