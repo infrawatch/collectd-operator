@@ -19,52 +19,52 @@ data:
     # ------- Load Plugins -------
 
     LoadPlugin amqp1
-    {% if 'connectivity' in plugins %}
+    {% if 'connectivity' in collectd_plugins %}
     LoadPlugin connectivity
     {% endif %}
-    {% if 'cpu' in plugins %}
+    {% if 'cpu' in collectd_plugins %}
     LoadPlugin cpu
     {% endif %}
-    {% if 'cpufreq' in plugins %}
+    {% if 'cpufreq' in collectd_plugins %}
     LoadPlugin cpufreq
     {% endif %}
-    {% if 'df' in plugins %}
+    {% if 'df' in collectd_plugins %}
     LoadPlugin df
     {% endif %}
-    {% if 'disk' in plugins %}
+    {% if 'disk' in collectd_plugins %}
     LoadPlugin disk
     {% endif %}
-    {% if 'hugepages' in plugins %}
+    {% if 'hugepages' in collectd_plugins %}
     LoadPlugin hugepages
     {% endif %}
-    {% if 'intel_rdt' in plugins %}
+    {% if 'intel_rdt' in collectd_plugins %}
     LoadPlugin intel_rdt
     {% endif %}
-    {% if 'interface' in plugins %}
+    {% if 'interface' in collectd_plugins %}
     LoadPlugin interface
     {% endif %}
-    {% if 'ipmi' in plugins %}
+    {% if 'ipmi' in collectd_plugins %}
     LoadPlugin ipmi
     {% endif %}
-    {% if 'load' in plugins %}
+    {% if 'load' in collectd_plugins %}
     LoadPlugin load
     {% endif %}
-    {% if 'memory' in plugins %}
+    {% if 'memory' in collectd_plugins %}
     LoadPlugin memory
     {% endif %}
-    {% if 'network' in plugins %}
+    {% if 'network' in collectd_plugins %}
     LoadPlugin network
     {% endif %}
-    {% if 'ovs_stats' in plugins %}
+    {% if 'ovs_stats' in collectd_plugins %}
     LoadPlugin ovs_stats
     {% endif %}
-    {% if 'processes' in plugins %}
+    {% if 'processes' in collectd_plugins %}
     LoadPlugin processes
     {% endif %}
-    {% if 'uptime' in plugins %}
+    {% if 'uptime' in collectd_plugins %}
     LoadPlugin uptime
     {% endif %}
-    {% if 'virt' in plugins %}
+    {% if 'virt' in collectd_plugins %}
     LoadPlugin virt
     {% endif %}
 
@@ -93,7 +93,7 @@ data:
       </Transport>
     </Plugin>
 
-    {% if 'ceph' in plugins %}
+    {% if 'ceph' in collectd_plugins %}
     <Plugin ceph>
     #  LongRunAvgLatency false
     #  ConvertSpecialMetricTypes true
@@ -117,7 +117,7 @@ data:
     </Plugin>
     {% endif %}
 
-    {% if 'cpu' in plugins %}
+    {% if 'cpu' in collectd_plugins %}
     <Plugin cpu>
       ReportByState true
       ReportByCpu true
@@ -128,7 +128,7 @@ data:
     </Plugin>
     {% endif %}
 
-    {% if 'df' in plugins %}
+    {% if 'df' in collectd_plugins %}
     <Plugin df>
       IgnoreSelected true
       ReportByDevice true
@@ -138,13 +138,13 @@ data:
     </Plugin>
     {% endif %}
 
-    {% if 'disk' in plugins %}
+    {% if 'disk' in collectd_plugins %}
     <Plugin disk>
       IgnoreSelected false
     </Plugin>
     {% endif %}
 
-    {% if 'hugepages' in plugins %}
+    {% if 'hugepages' in collectd_plugins %}
     <Plugin hugepages>
       ReportPerNodeHP true
       ReportRootHP true
@@ -154,19 +154,19 @@ data:
     </Plugin>
     {% endif %}
 
-    {% if 'intel_rdt' in plugins %}
+    {% if 'intel_rdt' in collectd_plugins %}
     <Plugin "intel_rdt">
     </Plugin>
     {% endif %}
 
-    {% if 'interface' in plugins %}
+    {% if 'interface' in collectd_plugins %}
     <Plugin interface>
       IgnoreSelected true
       ReportInactive true
     </Plugin>
     {% endif %}
 
-    {% if 'ipmi' in plugins %}
+    {% if 'ipmi' in collectd_plugins %}
     <Plugin ipmi>
         <Instance "local">
            Username {{ collectd_plugin_ipmi_username }}
@@ -200,20 +200,20 @@ data:
     </Plugin>
     {% endif %}
 
-    {% if 'load' in plugins %}
+    {% if 'load' in collectd_plugins %}
     <Plugin load>
       ReportRelative true
     </Plugin>
     {% endif %}
 
-    {% if 'memory' in plugins %}
+    {% if 'memory' in collectd_plugins %}
     <Plugin memory>
       ValuesAbsolute true
       ValuesPercentage true
     </Plugin>
     {% endif %}
 
-    {% if 'ovs_stats' in plugins %}
+    {% if 'ovs_stats' in collectd_plugins %}
     <Plugin ovs_stats>
     #  Port "6640"
     #  Address "127.0.0.1"
@@ -222,7 +222,7 @@ data:
     </Plugin>
     {% endif %}
 
-    {% if 'processes' in plugins %}
+    {% if 'processes' in collectd_plugins %}
     <Plugin processes>
     #	CollectFileDescriptor true
     #	CollectContextSwitch true
@@ -240,7 +240,7 @@ data:
     </Plugin>
     {% endif %}
 
-    {% if 'virt' in plugins %}
+    {% if 'virt' in collectd_plugins %}
     <Plugin virt>
        Connection "qemu:///system"
        RefreshInterval {{ collectd_plugin_virt_refreshinterval }}
