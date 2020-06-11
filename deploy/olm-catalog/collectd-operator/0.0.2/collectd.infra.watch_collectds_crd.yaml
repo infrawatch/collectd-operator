@@ -40,6 +40,12 @@ spec:
             collectImageTag:
               description: "Container image tag for collectd"
               type: string
+            collectdPlugins:
+              description: "List of collectd plugins"
+              type: array
+              items:
+                description: "Plugin name"
+                type: string
         status:
           description: Status results of Collectd
           properties:
