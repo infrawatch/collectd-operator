@@ -19,6 +19,9 @@ data:
     # ------- Load Plugins -------
 
     LoadPlugin amqp1
+    {% if 'ceph' in collectd_plugins %}
+    LoadPlugin ceph
+    {% endif %}
     {% if 'connectivity' in collectd_plugins %}
     LoadPlugin connectivity
     {% endif %}
