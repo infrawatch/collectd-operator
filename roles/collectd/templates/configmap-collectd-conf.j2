@@ -4,6 +4,12 @@ metadata:
   namespace: {{ meta.namespace }}
   name: collectd-config
 
+# This is templated, might be able to a loop/list of files?
+# Can run the config generator first, and put the files into a known location
+# {% for plugin in collectd_plugins %}
+#   {% include "{{collectd_conf_output_dir}}/{{ plugin }}.conf.j2" %}
+# {% endfor %}
+
 data:
   node-collectd.conf: |
     #Hostname localhost
@@ -17,157 +23,21 @@ data:
     WriteThreads 5
 
     # ------- Load Plugins -------
+    {% for plugin in collectd_plugins %}
+    {%- include "{{collectd_conf_output_dir}}/{{ plugin }}.conf.j2" -%}
+    {% endfor %}
+    # Emma ended
 
-    LoadPlugin amqp1
-    {% if 'ceph' in collectd_plugins %}
-    LoadPlugin ceph
-    {% endif %}
-    {% if 'connectivity' in collectd_plugins %}
-    LoadPlugin connectivity
-    {% endif %}
-    {% if 'cpu' in collectd_plugins %}
-    LoadPlugin cpu
-    {% endif %}
-    {% if 'cpufreq' in collectd_plugins %}
-    LoadPlugin cpufreq
-    {% endif %}
-    {% if 'df' in collectd_plugins %}
-    LoadPlugin df
-    {% endif %}
-    {% if 'disk' in collectd_plugins %}
-    LoadPlugin disk
-    {% endif %}
-    {% if 'hugepages' in collectd_plugins %}
-    LoadPlugin hugepages
-    {% endif %}
-    {% if 'intel_rdt' in collectd_plugins %}
-    LoadPlugin intel_rdt
-    {% endif %}
-    {% if 'interface' in collectd_plugins %}
-    LoadPlugin interface
-    {% endif %}
     {% if 'ipmi' in collectd_plugins %}
     LoadPlugin ipmi
     {% endif %}
-    {% if 'load' in collectd_plugins %}
-    LoadPlugin load
-    {% endif %}
-    {% if 'memory' in collectd_plugins %}
-    LoadPlugin memory
-    {% endif %}
-    {% if 'network' in collectd_plugins %}
-    LoadPlugin network
-    {% endif %}
-    {% if 'ovs_stats' in collectd_plugins %}
-    LoadPlugin ovs_stats
-    {% endif %}
-    {% if 'processes' in collectd_plugins %}
-    LoadPlugin processes
-    {% endif %}
-    {% if 'uptime' in collectd_plugins %}
-    LoadPlugin uptime
-    {% endif %}
-    {% if 'virt' in collectd_plugins %}
-    LoadPlugin virt
-    {% endif %}
 
-    ##############################################################################
-    # Plugin configuration                                                       #
-    #----------------------------------------------------------------------------#
-    # In this section configuration stubs for each plugin are provided. A desc-  #
-    # ription of those options is available in the collectd.conf(5) manual page. #
-    ##############################################################################
-
-    <Plugin amqp1>
-      <Transport "metrics">
-        Host "{{ collectd_host }}"
-        Port "{{ collectd_port }}"
-        Address "collectd"
-        RetryDelay 1
-        <Instance "openshift-notify">
-            Format JSON
-            PreSettle false
-            Notify true
-        </Instance>
-        <Instance "openshift-telemetry">
-            Format JSON
-            PreSettle false
-        </Instance>
-      </Transport>
-    </Plugin>
-
-    {% if 'ceph' in collectd_plugins %}
-    <Plugin ceph>
-    #  LongRunAvgLatency false
-    #  ConvertSpecialMetricTypes true
-    {% for daemon in collectd_plugin_ceph %}
-      <Daemon "{{ daemon.name|e }}">
-        SocketPath "{{ daemon.socketpath|e }} "
-      </Daemon>
-    {% endfor %}
-    #  <Daemon "osd.0">
-    #    SocketPath "/var/run/ceph/ceph-osd.0.asok"
-    #  </Daemon>
-    #  <Daemon "osd.1">
-    #    SocketPath "/var/run/ceph/ceph-osd.1.asok"
-    #  </Daemon>
-    #  <Daemon "mon.a">
-    #    SocketPath "/var/run/ceph/ceph-mon.ceph1.asok"
-    #  </Daemon>
-    #  <Daemon "mds.a">
-    #    SocketPath "/var/run/ceph/ceph-mds.ceph1.asok"
-    #  </Daemon>
-    </Plugin>
-    {% endif %}
-
-    {% if 'cpu' in collectd_plugins %}
-    <Plugin cpu>
-      ReportByState true
-      ReportByCpu true
-      ValuesPercentage true
-      ReportNumCpu true
-      ReportGuestState true
-      SubtractGuestState true
-    </Plugin>
-    {% endif %}
-
-    {% if 'df' in collectd_plugins %}
-    <Plugin df>
-      IgnoreSelected true
-      ReportByDevice true
-      ReportInodes true
-      ValuesAbsolute true
-      ValuesPercentage true
-    </Plugin>
-    {% endif %}
-
-    {% if 'disk' in collectd_plugins %}
-    <Plugin disk>
-      IgnoreSelected false
-    </Plugin>
-    {% endif %}
-
-    {% if 'hugepages' in collectd_plugins %}
-    <Plugin hugepages>
-      ReportPerNodeHP true
-      ReportRootHP true
-      ValuesPages true
-      ValuesBytes false
-      ValuesPercentage false
-    </Plugin>
-    {% endif %}
-
-    {% if 'intel_rdt' in collectd_plugins %}
-    <Plugin "intel_rdt">
-    </Plugin>
-    {% endif %}
-
-    {% if 'interface' in collectd_plugins %}
-    <Plugin interface>
-      IgnoreSelected true
-      ReportInactive true
-    </Plugin>
-    {% endif %}
+    # ##############################################################################
+    # # Plugin configuration                                                       #
+    # #----------------------------------------------------------------------------#
+    # # In this section configuration stubs for each plugin are provided. A desc-  #
+    # # ription of those options is available in the collectd.conf(5) manual page. #
+    # ##############################################################################
 
     {% if 'ipmi' in collectd_plugins %}
     <Plugin ipmi>
@@ -203,28 +73,6 @@ data:
     </Plugin>
     {% endif %}
 
-    {% if 'load' in collectd_plugins %}
-    <Plugin load>
-      ReportRelative true
-    </Plugin>
-    {% endif %}
-
-    {% if 'memory' in collectd_plugins %}
-    <Plugin memory>
-      ValuesAbsolute true
-      ValuesPercentage true
-    </Plugin>
-    {% endif %}
-
-    {% if 'ovs_stats' in collectd_plugins %}
-    <Plugin ovs_stats>
-    #  Port "6640"
-    #  Address "127.0.0.1"
-    #  Socket "/var/run/openvswitch/db.sock"
-    #  Bridges "br0" "br_ext"
-    </Plugin>
-    {% endif %}
-
     {% if 'processes' in collectd_plugins %}
     <Plugin processes>
     #	CollectFileDescriptor true
@@ -242,14 +90,3 @@ data:
     #	</Process>
     </Plugin>
     {% endif %}
-
-    {% if 'virt' in collectd_plugins %}
-    <Plugin virt>
-       Connection "qemu:///system"
-       RefreshInterval {{ collectd_plugin_virt_refreshinterval }}
-       HostnameFormat {{ collectd_plugin_virt_hostnameformat }}
-       PluginInstanceFormat {{ collectd_plugin_virt_plugininstanceformat }}
-       ExtraStats "{{ collectd_plugin_virt_extrastats }}"
-    </Plugin>
-    {% endif %}
-
