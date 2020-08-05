@@ -23,8 +23,6 @@ data:
     WriteThreads 5
 
     # ------- Load Plugins -------
-
-    # This is where Emma added stuff
     {% for plugin in collectd_plugins %}
     {%- include "{{collectd_conf_output_dir}}/{{ plugin }}.conf.j2" -%}
     {% endfor %}
