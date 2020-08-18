@@ -1,0 +1,15 @@
+---
+# tasks file for test-role
+# Tasks to replace the conditions section from THT
+# Set up defaults to set bools to false
+
+- debug:
+    var: collectd_plugins
+
+- name: "Create core collectd config"
+  set_fact: "{{ item }}={{ lookup('template', item + '.conf.j2') }}"
+  loop: "{{ collectd_plugins }}"
+
+- debug:
+    var: "{{ item }}"
+  loop: "{{ collectd_plugins }}"
