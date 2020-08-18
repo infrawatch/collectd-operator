@@ -37,6 +37,7 @@ following commands:
 ```
 oc new-build --name collectd-operator --dockerfile - < ./build/Dockerfile
 oc start-build collectd-operator --wait --from-dir .
+oc set image-lookup collectd-operator
 ```
 
 You can check your builds with `oc get builds`. You will see a failed build
@@ -187,7 +188,7 @@ spec:
         - action: labeldrop
           regex: job
           sourceLabels: []
-      port: "9103"
+      port: collectd-write-prometheus
   selector:
     matchLabels:
       component: collectd
@@ -240,7 +241,11 @@ metadata:
   name: 'collectd'
   namespace: 'collectd'
 spec:
-  collectdHost: qdr-interconnect
+  collectdInterval: 10
+  collectdPlugins:
+    - cpu
+    - df
+    - write_prometheus
 EOF
 ```
 

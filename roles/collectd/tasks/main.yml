@@ -6,13 +6,10 @@
 - debug:
     msg: "Current collectd plugins: {{ collectd_plugins }}"
 
-- debug:
-    msg: "{{ lookup('vars', item) }}"
-  loop: "{{ collectd_plugins }}"
-
-- debug:
-    var: "{{ lookup('template', 'configmap-collectd-conf.j2') | from_yaml }}"
-
+- name: Get collectd-conf ConfigMap environment
+  set_fact:
+    collectd_conf_resource_configmap:
+      env: "{{ lookup('template', 'configmap-collectd-conf.j2') }}"
 
 - name: Setup collectd
   k8s:
@@ -25,3 +22,24 @@
     - name: configmap-collectd-json.j2
     - name: configmap-collectd-conf.j2
     - name: daemonset-collectd.j2
+
+- name: Setup Service for write_prometheus
+  k8s:
+    state: "{{ state }}"
+    definition:
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: 'collectd'
+        namespace: '{{ meta.namespace }}'
+        labels:
+          component: collectd
+      spec:
+        ports:
+        - name: collectd-write-prometheus
+          port: "{{ collectd_plugin_write_prometheus_port }}"
+          targetPort: "{{ collectd_plugin_write_prometheus_port }}"
+          protocol: TCP
+        selector:
+          component: collectd
+  when: '"write_prometheus" in collectd_plugins'
