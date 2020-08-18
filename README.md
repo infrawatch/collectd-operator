@@ -92,6 +92,23 @@ NAME                                                                  DISPLAY   
 clusterserviceversion.operators.coreos.com/collectd-operator.v0.0.2   Collectd Operator   0.0.2     collectd-operator.v0.0.1   Succeeded
 ```
 
+# Enable OperatorHub.io on OpenShift
+
+```
+oc apply -f - <<EOF
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: operatorhubio-operators
+  namespace: openshift-marketplace
+spec:
+  sourceType: grpc
+  image: quay.io/operator-framework/upstream-community-operators:latest
+  displayName: OperatorHub.io Operators
+  publisher: OperatorHub.io
+EOF
+```
+
 # Other Components
 
 Load additional components to setup a transport mechanism.
@@ -111,9 +128,8 @@ spec:
   channel: beta
   installPlanApproval: Automatic
   name: prometheus
-  source: operatorhubio-catalog
-  sourceNamespace: olm
-  startingCSV: prometheusoperator.0.37.0
+  source: operatorhubio-operators
+  sourceNamespace: openshift-marketplace
 EOF
 ```
 
@@ -135,7 +151,7 @@ spec:
   serviceAccountName: prometheus-k8s
   serviceMonitorSelector:
     matchLabels:
-      app: smart-gateway
+      component: collectd
   alerting:
     alertmanagers:
     - name: alertmanager-operated
@@ -153,7 +169,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   labels:
-    app: smart-gateway
+    component: collectd
   name: 'collectd'
   namespace: 'collectd'
 spec:
@@ -171,10 +187,10 @@ spec:
         - action: labeldrop
           regex: job
           sourceLabels: []
-      port: prom-http
+      port: "9103"
   selector:
     matchLabels:
-      app: smart-gateway
+      component: collectd
 EOF
 ```
 

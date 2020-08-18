@@ -1,0 +1,1 @@
+collectd_plugin_write_prometheus_port: 9103
