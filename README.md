@@ -18,7 +18,7 @@ source <(minikube completion bash)
 ## Development
 
 You can test that everything passes the Operator SDK scorecard. Currently we're
-leveraging `operator-sdk` v0.15.2. You must run this when the collectd operator
+leveraging `operator-sdk` v0.16.0. You must run this when the collectd operator
 is not already running. If the CRD is loaded, the scorecard will fail.
 
 ```
@@ -26,6 +26,21 @@ kubectl create namespace collectd
 kubectl config set-context --current --namespace=collectd
 operator-sdk scorecard
 ```
+
+### Local builds on OpenShift
+
+If you are using OpenShift, you can use a BuildConfig and Build to result in a
+local image from your source directory. First, change to the directory that
+holds the collectd-operator source code (clone this repository) and run the
+following commands:
+
+```
+oc new-build --name collectd-operator --dockerfile - < ./build/Dockerfile
+oc start-build collectd-operator --wait --from-dir .
+```
+
+You can check your builds with `oc get builds`. You will see a failed build
+after doing the initial build configuration setup. It can be ignored.
 
 ## Load the Operator
 
@@ -81,99 +96,6 @@ clusterserviceversion.operators.coreos.com/collectd-operator.v0.0.2   Collectd O
 
 Load additional components to setup a transport mechanism.
 
-## QDR Operator
-
-Load the ServiceAccount, Role, RoleBinding, ClusterRole, ClusterRoleBinding and
-CustomResourceDefinition:
-
-```
-git clone https://github.com/interconnectedcloud/qdr-operator.git
-cd qdr-operator
-kubectl apply -f deploy/service_account.yaml \
-    -f deploy/role.yaml \
-    -f deploy/role_binding.yaml \
-    -f deploy/cluster_role.yaml \
-    -f deploy/cluster_role_binding.yaml \
-    -f deploy/crds/interconnectedcloud_v1alpha1_interconnect_crd.yaml
-```
-
-Then load the ClusterServiceVersion:
-
-| **NOTE** You may need to apply a small patch prior to running the next command. See https://github.com/interconnectedcloud/qdr-operator/pull/75 |
-|-------------------------------------------------------------------------------------------------------------------------------------------------|
-
-```
-sed -e "s#placeholder#collectd#g" deploy/olm-catalog/qdr-operator/0.4.0/qdr-operator.v0.4.0.clusterserviceversion.yaml | kubectl apply -f -
-```
-
-Then create an instance of QDR.
-
-```
-kubectl apply -f - <<EOF
-apiVersion: interconnectedcloud.github.io/v1alpha1
-kind: Interconnect
-metadata:
-  name: 'qdr-interconnect'
-  namespace: 'collectd'
-spec:
-  deploymentPlan:
-    size: 1
-    role: interior
-    livenessPort: 8888
-    placement: AntiAffinity
-  addresses:
-    - distribution: closest
-      prefix: closest
-    - distribution: multicast
-      prefix: multicast
-    - distribution: closest
-      prefix: unicast
-    - distribution: closest
-      prefix: exclusive
-    - distribution: multicast
-      prefix: broadcast
-    - distribution: multicast
-      prefix: collectd
-    - distribution: multicast
-      prefix: ceilometer
-  listeners:
-    - port: 5672
-    - expose: true
-      http: true
-      port: 8672
-EOF
-```
-
-## Smart Gateway Operator
-
-Instantiate the Smart Gateway Operator.
-
-```
-git clone https://github.com/infrawatch/smart-gateway-operator
-cd smart-gateway-operator
-kubectl apply -f deploy/role_binding.yaml -f deploy/role.yaml -f deploy/service_account.yaml -f deploy/olm-catalog/smart-gateway-operator/1.0.2/smartgateway.infra.watch_smartgateways_crd.yaml
-sed -e "s#placeholder#collectd#g" deploy/olm-catalog/smart-gateway-operator/1.0.2/smart-gateway-operator.v1.0.2.clusterserviceversion.yaml | kubectl apply -f -
-```
-
-Create a Smart Gateway instance.
-
-```
-kubectl apply -f - <<EOF
-apiVersion: smartgateway.infra.watch/v2alpha1
-kind: SmartGateway
-metadata:
-  name: 'collectd-metrics-telemetry'
-  namespace: 'collectd'
-spec:
-  amqpUrl: 'qdr-interconnect:5672/collectd/openshift-telemetry'
-  debug: false
-  serviceType: 'metrics'
-  size: 1
-  prefetch: 15000
-  useTimestamp: true
-EOF
-```
-
 ## Prometheus Operator
 
 Subscribe to Prometheus Operator from the OperatorHubIO catalog source:
@@ -223,7 +145,7 @@ EOF
 ```
 
 Create a ServiceMonitor to result in Prometheus being configured to scrape our
-new Smart Gateway:
+new collectd instance:
 
 ```
 kubectl apply -f - <<EOF

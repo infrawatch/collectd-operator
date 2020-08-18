@@ -3,6 +3,17 @@
   set_fact:
     api_groups: "{{ lookup('k8s', cluster_info='api_groups') }}"
 
+- debug:
+    msg: "Current collectd plugins: {{ collectd_plugins }}"
+
+- debug:
+    msg: "{{ lookup('vars', item) }}"
+  loop: "{{ collectd_plugins }}"
+
+- debug:
+    var: "{{ lookup('template', 'configmap-collectd-conf.j2') | from_yaml }}"
+
+
 - name: Setup collectd
   k8s:
     state: "{{ state }}"

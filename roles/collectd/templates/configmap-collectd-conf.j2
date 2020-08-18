@@ -3,13 +3,6 @@ apiVersion: v1
 metadata:
   namespace: {{ meta.namespace }}
   name: collectd-config
-
-# This is templated, might be able to a loop/list of files?
-# Can run the config generator first, and put the files into a known location
-# {% for plugin in collectd_plugins %}
-#   {% include "{{collectd_conf_output_dir}}/{{ plugin }}.conf.j2" %}
-# {% endfor %}
-
 data:
   node-collectd.conf: |
     #Hostname localhost
@@ -23,14 +16,14 @@ data:
     WriteThreads 5
 
     # ------- Load Plugins -------
-    {% for plugin in collectd_plugins %}
-    {%- include "{{collectd_conf_output_dir}}/{{ plugin }}.conf.j2" -%}
-    {% endfor %}
+{% for plugin in collectd_plugins %}
+{{ lookup('vars', plugin) | indent(width=4, indentfirst=True) }}
+{% endfor %}
     # Emma ended
 
-    {% if 'ipmi' in collectd_plugins %}
+{% if 'ipmi' in collectd_plugins %}
     LoadPlugin ipmi
-    {% endif %}
+{% endif %}
 
     # ##############################################################################
     # # Plugin configuration                                                       #
@@ -39,7 +32,7 @@ data:
     # # ription of those options is available in the collectd.conf(5) manual page. #
     # ##############################################################################
 
-    {% if 'ipmi' in collectd_plugins %}
+{% if 'ipmi' in collectd_plugins %}
     <Plugin ipmi>
         <Instance "local">
            Username {{ collectd_plugin_ipmi_username }}
@@ -71,9 +64,9 @@ data:
     #		SELClearEvent false
     #	</Instance>
     </Plugin>
-    {% endif %}
+{% endif %}
 
-    {% if 'processes' in collectd_plugins %}
+{% if 'processes' in collectd_plugins %}
     <Plugin processes>
     #	CollectFileDescriptor true
     #	CollectContextSwitch true
@@ -89,4 +82,4 @@ data:
     #		CollectContextSwitch true
     #	</Process>
     </Plugin>
-    {% endif %}
+{% endif %}
