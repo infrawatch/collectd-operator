@@ -1,9 +1,7 @@
 - hosts: localhost
   gather_facts: no
   tasks:
-  - set_fact:
-      collectd_conf_output_dir: "/tmp/collectd.conf.d"
   - import_role:
-      name: "collectd_config"
+      name: "infrawatch.collectd-config"
   - import_role:
       name: "collectd"
