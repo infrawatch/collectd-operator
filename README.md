@@ -4,27 +4,46 @@ Basic install collectd operator for k8s
 
 ## Environment
 
-Test environment is currently using minikube v1.11.0 with the registry and OLM
-addons.
+Test environment is currently using CodeReady Containers v1.14.0 (OpenShift
+4.5).
 
 ```
-minikube start --cpus=4 --memory=49152 --driver=kvm2
-for i in default-storageclass ingress olm registry storage-provisioner; do minikube addons enable $i; done
-eval $(minikube podman-env)
-source <(kubectl completion bash)
-source <(minikube completion bash)
+crc start --cpus=4 --memory=49152 --driver=kvm2
+source <(oc completion bash)
 ```
 
 ## Development
 
 You can test that everything passes the Operator SDK scorecard. Currently we're
-leveraging `operator-sdk` v0.15.2. You must run this when the collectd operator
+leveraging `operator-sdk` v0.16.0. You must run this when the collectd operator
 is not already running. If the CRD is loaded, the scorecard will fail.
 
 ```
-kubectl create namespace collectd
-kubectl config set-context --current --namespace=collectd
+oc new-project collectd
 operator-sdk scorecard
+```
+
+### Local builds on OpenShift
+
+You can use a BuildConfig and Build to result in a local image from your source
+directory. First, change to the directory that holds the collectd-operator
+source code (clone this repository) and run the following commands:
+
+```
+ansible-galaxy install --role-file requirements.yml --roles-path ./roles/
+oc new-build --name collectd-operator --dockerfile - < ./build/Dockerfile
+oc start-build collectd-operator --wait --from-dir .
+oc set image-lookup collectd-operator
+```
+
+You can check your builds with `oc get builds`. You will see a failed build
+after doing the initial build configuration setup. It can be ignored.
+
+Subsequent builds can be built and deployed:
+
+```
+oc start-build collectd-operator --wait --from-dir .
+oc delete pod --selector name=collectd-operator
 ```
 
 ## Load the Operator
@@ -35,7 +54,7 @@ be importing things manually.
 First, create the OperatorGroup:
 
 ```
-kubectl apply -f - <<EOF
+oc apply -f - <<EOF
 apiVersion: operators.coreos.com/v1
 kind: OperatorGroup
 metadata:
@@ -51,16 +70,15 @@ Then create the ServiceAccount, ClusterRole, ClusterRoleBinding and
 ClusterServiceVersion:
 
 ```
-kubectl create namespace collectd
-kubectl config set-context --current --namespace=collectd
-kubectl apply -f deploy/service_account.yaml -f deploy/role.yaml -f deploy/role_binding.yaml -f deploy/olm-catalog/collectd-operator/0.0.2/collectd.infra.watch_collectds_crd.yaml 
-sed -e "s#placeholder#collectd#g" deploy/olm-catalog/collectd-operator/0.0.2/collectd-operator.v0.0.2.clusterserviceversion.yaml | kubectl apply -f -
+oc project collectd
+oc apply -f deploy/service_account.yaml -f deploy/role.yaml -f deploy/role_binding.yaml -f deploy/olm-catalog/collectd-operator/0.0.2/collectd.infra.watch_collectds_crd.yaml
+sed -e "s#placeholder#collectd#g" deploy/olm-catalog/collectd-operator/0.0.2/collectd-operator.v0.0.2.clusterserviceversion.yaml | oc apply -f -
 ```
 
 Then we can check that everything is working.
 
 ```
-kubectl get all,csv
+oc get all,csv
 NAME                                     READY   STATUS    RESTARTS   AGE
 pod/collectd-operator-65749b54b4-ngwn4   2/2     Running   0          7m50s
 
@@ -77,109 +95,39 @@ NAME                                                                  DISPLAY   
 clusterserviceversion.operators.coreos.com/collectd-operator.v0.0.2   Collectd Operator   0.0.2     collectd-operator.v0.0.1   Succeeded
 ```
 
+## Checking collectd Operator logs
+
+```
+oc logs --selector name=collectd-operator -c ansible -f
+```
+
+# Enable OperatorHub.io
+
+```
+oc apply -f - <<EOF
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: operatorhubio-operators
+  namespace: openshift-marketplace
+spec:
+  sourceType: grpc
+  image: quay.io/operator-framework/upstream-community-operators:latest
+  displayName: OperatorHub.io Operators
+  publisher: OperatorHub.io
+EOF
+```
+
 # Other Components
 
 Load additional components to setup a transport mechanism.
-
-## QDR Operator
-
-Load the ServiceAccount, Role, RoleBinding, ClusterRole, ClusterRoleBinding and
-CustomResourceDefinition:
-
-```
-git clone https://github.com/interconnectedcloud/qdr-operator.git
-cd qdr-operator
-kubectl apply -f deploy/service_account.yaml \
-    -f deploy/role.yaml \
-    -f deploy/role_binding.yaml \
-    -f deploy/cluster_role.yaml \
-    -f deploy/cluster_role_binding.yaml \
-    -f deploy/crds/interconnectedcloud_v1alpha1_interconnect_crd.yaml
-```
-
-Then load the ClusterServiceVersion:
-
-| **NOTE** You may need to apply a small patch prior to running the next command. See https://github.com/interconnectedcloud/qdr-operator/pull/75 |
-|-------------------------------------------------------------------------------------------------------------------------------------------------|
-
-```
-sed -e "s#placeholder#collectd#g" deploy/olm-catalog/qdr-operator/0.4.0/qdr-operator.v0.4.0.clusterserviceversion.yaml | kubectl apply -f -
-```
-
-Then create an instance of QDR.
-
-```
-kubectl apply -f - <<EOF
-apiVersion: interconnectedcloud.github.io/v1alpha1
-kind: Interconnect
-metadata:
-  name: 'qdr-interconnect'
-  namespace: 'collectd'
-spec:
-  deploymentPlan:
-    size: 1
-    role: interior
-    livenessPort: 8888
-    placement: AntiAffinity
-  addresses:
-    - distribution: closest
-      prefix: closest
-    - distribution: multicast
-      prefix: multicast
-    - distribution: closest
-      prefix: unicast
-    - distribution: closest
-      prefix: exclusive
-    - distribution: multicast
-      prefix: broadcast
-    - distribution: multicast
-      prefix: collectd
-    - distribution: multicast
-      prefix: ceilometer
-  listeners:
-    - port: 5672
-    - expose: true
-      http: true
-      port: 8672
-EOF
-```
-
-## Smart Gateway Operator
-
-Instantiate the Smart Gateway Operator.
-
-```
-git clone https://github.com/infrawatch/smart-gateway-operator
-cd smart-gateway-operator
-kubectl apply -f deploy/role_binding.yaml -f deploy/role.yaml -f deploy/service_account.yaml -f deploy/olm-catalog/smart-gateway-operator/1.0.2/smartgateway.infra.watch_smartgateways_crd.yaml
-sed -e "s#placeholder#collectd#g" deploy/olm-catalog/smart-gateway-operator/1.0.2/smart-gateway-operator.v1.0.2.clusterserviceversion.yaml | kubectl apply -f -
-```
-
-Create a Smart Gateway instance.
-
-```
-kubectl apply -f - <<EOF
-apiVersion: smartgateway.infra.watch/v2alpha1
-kind: SmartGateway
-metadata:
-  name: 'collectd-metrics-telemetry'
-  namespace: 'collectd'
-spec:
-  amqpUrl: 'qdr-interconnect:5672/collectd/openshift-telemetry'
-  debug: false
-  serviceType: 'metrics'
-  size: 1
-  prefetch: 15000
-  useTimestamp: true
-EOF
-```
 
 ## Prometheus Operator
 
 Subscribe to Prometheus Operator from the OperatorHubIO catalog source:
 
 ```
-kubectl apply -f - <<EOF
+oc apply -f - <<EOF
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
@@ -189,16 +137,15 @@ spec:
   channel: beta
   installPlanApproval: Automatic
   name: prometheus
-  source: operatorhubio-catalog
-  sourceNamespace: olm
-  startingCSV: prometheusoperator.0.37.0
+  source: operatorhubio-operators
+  sourceNamespace: openshift-marketplace
 EOF
 ```
 
 Create a Prometheus instance:
 
 ```
-kubectl apply -f - <<EOF
+oc apply -f - <<EOF
 apiVersion: monitoring.coreos.com/v1
 kind: Prometheus
 metadata:
@@ -213,7 +160,7 @@ spec:
   serviceAccountName: prometheus-k8s
   serviceMonitorSelector:
     matchLabels:
-      app: smart-gateway
+      component: collectd
   alerting:
     alertmanagers:
     - name: alertmanager-operated
@@ -223,15 +170,15 @@ EOF
 ```
 
 Create a ServiceMonitor to result in Prometheus being configured to scrape our
-new Smart Gateway:
+new collectd instance:
 
 ```
-kubectl apply -f - <<EOF
+oc apply -f - <<EOF
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   labels:
-    app: smart-gateway
+    component: collectd
   name: 'collectd'
   namespace: 'collectd'
 spec:
@@ -249,17 +196,17 @@ spec:
         - action: labeldrop
           regex: job
           sourceLabels: []
-      port: prom-http
+      port: collectd-write-prometheus
   selector:
     matchLabels:
-      app: smart-gateway
+      component: collectd
 EOF
 ```
 
 Create an Alertmanager instance:
 
 ```
-kubectl apply -f - <<EOF
+oc apply -f - <<EOF
 apiVersion: v1
 kind: Secret
 metadata:
@@ -294,15 +241,30 @@ EOF
 
 ## Create Collectd DaemonSet
 
+Create a `Collectd` object which will result in the collectd Operator creating
+a DaemonSet so that collectd is running on each OpenShift node. Configuration
+of collectd is dynamically generated at runtime via
+[collectd_config](https://github.com/infrawatch/collectd-config-ansible-role).
+
 ```
-kubectl apply -f - <<EOF
+oc apply -f - <<EOF
 apiVersion: collectd.infra.watch/v1alpha1
 kind: Collectd
 metadata:
   name: 'collectd'
   namespace: 'collectd'
 spec:
-  collectdHost: qdr-interconnect
+  collectdInterval: 10
+  collectdPlugins:
+    - cpu
+    - df
+    - disk
+    - hugepages
+    - interface
+    - memory
+    - network
+    - uptime
+    - write_prometheus
 EOF
 ```
 
@@ -312,6 +274,12 @@ Accessing the Prometheus UI via minikube is done by exposing the
 `prometheus-operated` service.
 
 ```
-kubectl expose -n collectd service prometheus-operated --port=80 --target-port=9090 --name=prometheus-web --type=LoadBalancer
-minikube service prometheus-web -n collectd
+oc create route edge metrics-store --service=prometheus-operated --insecure-policy="Redirect" --port=9090
+oc get routes
+```
+
+# Query Prometheus for available metrics
+
+```
+curl -k https://metrics-store-collectd.apps-crc.testing/api/v1/label/__name__/values | jq
 ```
