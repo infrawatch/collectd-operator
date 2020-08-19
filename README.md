@@ -4,15 +4,12 @@ Basic install collectd operator for k8s
 
 ## Environment
 
-Test environment is currently using minikube v1.11.0 with the registry and OLM
-addons.
+Test environment is currently using CodeReady Containers v1.14.0 (OpenShift
+4.5).
 
 ```
-minikube start --cpus=4 --memory=49152 --driver=kvm2
-for i in default-storageclass ingress olm registry storage-provisioner; do minikube addons enable $i; done
-eval $(minikube podman-env)
-source <(kubectl completion bash)
-source <(minikube completion bash)
+crc start --cpus=4 --memory=49152 --driver=kvm2
+source <(oc completion bash)
 ```
 
 ## Development
@@ -22,19 +19,18 @@ leveraging `operator-sdk` v0.16.0. You must run this when the collectd operator
 is not already running. If the CRD is loaded, the scorecard will fail.
 
 ```
-kubectl create namespace collectd
-kubectl config set-context --current --namespace=collectd
+oc new-project collectd
 operator-sdk scorecard
 ```
 
 ### Local builds on OpenShift
 
-If you are using OpenShift, you can use a BuildConfig and Build to result in a
-local image from your source directory. First, change to the directory that
-holds the collectd-operator source code (clone this repository) and run the
-following commands:
+You can use a BuildConfig and Build to result in a local image from your source
+directory. First, change to the directory that holds the collectd-operator
+source code (clone this repository) and run the following commands:
 
 ```
+ansible-galaxy install --role-file requirements.yml --roles-path ./roles/
 oc new-build --name collectd-operator --dockerfile - < ./build/Dockerfile
 oc start-build collectd-operator --wait --from-dir .
 oc set image-lookup collectd-operator
@@ -42,6 +38,13 @@ oc set image-lookup collectd-operator
 
 You can check your builds with `oc get builds`. You will see a failed build
 after doing the initial build configuration setup. It can be ignored.
+
+Subsequent builds can be built and deployed:
+
+```
+oc start-build collectd-operator --wait --from-dir .
+oc delete pod --selector name=collectd-operator
+```
 
 ## Load the Operator
 
@@ -51,7 +54,7 @@ be importing things manually.
 First, create the OperatorGroup:
 
 ```
-kubectl apply -f - <<EOF
+oc apply -f - <<EOF
 apiVersion: operators.coreos.com/v1
 kind: OperatorGroup
 metadata:
@@ -67,16 +70,15 @@ Then create the ServiceAccount, ClusterRole, ClusterRoleBinding and
 ClusterServiceVersion:
 
 ```
-kubectl create namespace collectd
-kubectl config set-context --current --namespace=collectd
-kubectl apply -f deploy/service_account.yaml -f deploy/role.yaml -f deploy/role_binding.yaml -f deploy/olm-catalog/collectd-operator/0.0.2/collectd.infra.watch_collectds_crd.yaml 
-sed -e "s#placeholder#collectd#g" deploy/olm-catalog/collectd-operator/0.0.2/collectd-operator.v0.0.2.clusterserviceversion.yaml | kubectl apply -f -
+oc project collectd
+oc apply -f deploy/service_account.yaml -f deploy/role.yaml -f deploy/role_binding.yaml -f deploy/olm-catalog/collectd-operator/0.0.2/collectd.infra.watch_collectds_crd.yaml
+sed -e "s#placeholder#collectd#g" deploy/olm-catalog/collectd-operator/0.0.2/collectd-operator.v0.0.2.clusterserviceversion.yaml | oc apply -f -
 ```
 
 Then we can check that everything is working.
 
 ```
-kubectl get all,csv
+oc get all,csv
 NAME                                     READY   STATUS    RESTARTS   AGE
 pod/collectd-operator-65749b54b4-ngwn4   2/2     Running   0          7m50s
 
@@ -93,7 +95,13 @@ NAME                                                                  DISPLAY   
 clusterserviceversion.operators.coreos.com/collectd-operator.v0.0.2   Collectd Operator   0.0.2     collectd-operator.v0.0.1   Succeeded
 ```
 
-# Enable OperatorHub.io on OpenShift
+## Checking collectd Operator logs
+
+```
+oc logs --selector name=collectd-operator -c ansible -f
+```
+
+# Enable OperatorHub.io
 
 ```
 oc apply -f - <<EOF
@@ -119,7 +127,7 @@ Load additional components to setup a transport mechanism.
 Subscribe to Prometheus Operator from the OperatorHubIO catalog source:
 
 ```
-kubectl apply -f - <<EOF
+oc apply -f - <<EOF
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
@@ -137,7 +145,7 @@ EOF
 Create a Prometheus instance:
 
 ```
-kubectl apply -f - <<EOF
+oc apply -f - <<EOF
 apiVersion: monitoring.coreos.com/v1
 kind: Prometheus
 metadata:
@@ -165,7 +173,7 @@ Create a ServiceMonitor to result in Prometheus being configured to scrape our
 new collectd instance:
 
 ```
-kubectl apply -f - <<EOF
+oc apply -f - <<EOF
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
@@ -198,7 +206,7 @@ EOF
 Create an Alertmanager instance:
 
 ```
-kubectl apply -f - <<EOF
+oc apply -f - <<EOF
 apiVersion: v1
 kind: Secret
 metadata:
@@ -233,8 +241,13 @@ EOF
 
 ## Create Collectd DaemonSet
 
+Create a `Collectd` object which will result in the collectd Operator creating
+a DaemonSet so that collectd is running on each OpenShift node. Configuration
+of collectd is dynamically generated at runtime via
+[collectd_config](https://github.com/infrawatch/collectd-config-ansible-role).
+
 ```
-kubectl apply -f - <<EOF
+oc apply -f - <<EOF
 apiVersion: collectd.infra.watch/v1alpha1
 kind: Collectd
 metadata:
@@ -245,6 +258,12 @@ spec:
   collectdPlugins:
     - cpu
     - df
+    - disk
+    - hugepages
+    - interface
+    - memory
+    - network
+    - uptime
     - write_prometheus
 EOF
 ```
@@ -255,6 +274,12 @@ Accessing the Prometheus UI via minikube is done by exposing the
 `prometheus-operated` service.
 
 ```
-kubectl expose -n collectd service prometheus-operated --port=80 --target-port=9090 --name=prometheus-web --type=LoadBalancer
-minikube service prometheus-web -n collectd
+oc create route edge metrics-store --service=prometheus-operated --insecure-policy="Redirect" --port=9090
+oc get routes
+```
+
+# Query Prometheus for available metrics
+
+```
+curl -k https://metrics-store-collectd.apps-crc.testing/api/v1/label/__name__/values | jq
 ```
