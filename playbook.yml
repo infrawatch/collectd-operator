@@ -3,5 +3,7 @@
   tasks:
   - import_role:
       name: "infrawatch.collectd-config"
+    vars:
+      templates_generate_to_disk: false
   - import_role:
       name: "collectd"
