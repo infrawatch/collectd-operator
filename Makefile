@@ -20,5 +20,5 @@ oc-start-build:
 	@oc start-build collectd-operator --wait --from-dir .
 
 clean:
-	@ansible-galaxy remove infrawatch.collectd-config
+	@ansible-galaxy remove collectd_config
 	@buildah rmi infrawatch/collectd-operator
