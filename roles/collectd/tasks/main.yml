@@ -9,7 +9,7 @@
 - name: Get collectd-conf ConfigMap environment
   set_fact:
     collectd_conf_resource_configmap:
-      env: "{{ lookup('template', 'configmap-collectd-conf.j2') }}"
+      env: "{{ lookup('template', 'configmap-collectd-conf.j2') | from_yaml }}"
 
 - name: Setup collectd
   k8s:
