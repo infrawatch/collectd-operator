@@ -2,7 +2,7 @@
   gather_facts: no
   tasks:
   - import_role:
-      name: "infrawatch.collectd-config"
+      name: "collectd_config"
     vars:
       templates_generate_to_disk: false
   - import_role:
