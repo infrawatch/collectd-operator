@@ -182,7 +182,7 @@ spec:
                 - /usr/local/bin/ao-logs
                 - /tmp/ansible-operator/runner
                 - stdout
-                image: collectd-operator:latest
+                image: quay.io/infrawatch/collectd-operator:latest
                 imagePullPolicy: Always
                 name: ansible
                 resources: {}
@@ -203,7 +203,7 @@ spec:
                   value: collectd-operator
                 - name: ANSIBLE_GATHERING
                   value: explicit
-                image: collectd-operator:latest
+                image: quay.io/infrawatch/collectd-operator:latest
                 imagePullPolicy: Always
                 name: operator
                 resources: {}
